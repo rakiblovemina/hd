@@ -11,6 +11,8 @@
             --dark-color: #141414;
             --light-dark-color: #222;
             --white-color: #fff;
+            /* CHANGE 1: This line makes the Plyr.io player's controls red */
+            --plyr-color-main: var(--primary-color);
         }
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -30,11 +32,34 @@
             width: calc(100% - 120px);
             z-index: 100;
         }
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
         .logo {
             font-size: 2.5em;
             font-weight: bold;
             color: var(--primary-color);
             text-transform: uppercase;
+        }
+        /* CHANGE 2: CSS for the new Telegram button */
+        .telegram-button {
+            background-color: #0088cc; /* Official Telegram Blue */
+            color: white;
+            padding: 8px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin-top: 10px; /* Space between title and button */
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .telegram-button:hover {
+            background-color: #00a0e9;
         }
         .search-container {
             width: 50%;
@@ -55,7 +80,7 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
         .main-content {
-            padding-top: 100px;
+            padding-top: 120px; /* Adjusted padding to prevent content from overlapping with the taller header */
         }
         .movies-container {
             padding: 20px 60px;
@@ -131,7 +156,11 @@
 <body>
 
     <header class="header">
-        <div class="logo">HDMINHAZ</div>
+        <div class="header-left">
+            <div class="logo">HDMINHAZ</div>
+            <!-- This link now points to your Telegram channel -->
+            <a href="https://t.me/hdminhaz" target="_blank" class="telegram-button">Join on Telegram</a>
+        </div>
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="Search title...">
         </div>
