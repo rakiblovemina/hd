@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDMINHAZ Admin Panel</title>
+    <style>
+        :root {
+            --primary-color: #e50914;
+            --secondary-color: #f4f4f4;
+            --dark-color: #222;
+            --white-color: #fff;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--dark-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+            background: var(--white-color);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .login-view, .admin-view {
+            display: none;
+        }
+        h1, h2 {
+            color: var(--dark-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        h1 span {
+            color: var(--primary-color);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #f6121d;
+        }
+        #logoutButton {
+             background-color: #555;
+             margin-top: 20px;
+        }
+        #logoutButton:hover {
+            background-color: #777;
+        }
+        .error-message {
+            color: var(--primary-color);
+            text-align: center;
+            margin-top: 15px;
+        }
+        .movie-list {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .movie-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .movie-item:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .delete-btn {
+            background-color: #ccc;
+            color: #333;
+            width: auto;
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+        .delete-btn:hover {
+            background-color: #bbb;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Login View -->
+        <div id="loginView" class="login-view">
+            <h1><span>HDMINHAZ</span> Admin Login</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit">Login</button>
+                <p id="loginError" class="error-message"></p>
+            </form>
+        </div>
+
+        <!-- Admin Panel View -->
+        <div id="adminView" class="admin-view">
+            <h1><span>HDMINHAZ</span> Admin Panel</h1>
+            <h2>Add New Movie</h2>
+            <form id="addMovieForm">
+                <div class="form-group">
+                    <label for="movieName">Movie Name</label>
+                    <input type="text" id="movieName" required>
+                </div>
+                <div class="form-group">
+                    <label for="posterLink">Poster Image Link</label>
+                    <input type="text" id="posterLink" required>
+                </div>
+                <div class="form-group">
+                    <label for="videoLink">Movie Video Link</label>
+                    <input type="text" id="videoLink" required>
+                </div>
+                <button type="submit">Add Movie</button>
+            </form>
+
+            <h2>Manage Movies</h2>
+            <div id="movieList" class="movie-list">
+                <!-- Movie list will be dynamically loaded here -->
+            </div>
+            <button id="logoutButton">Logout</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyCsKHpeuwVtoUNK49yXrJOz8yQJ8zXepSM",
+          authDomain: "hdmin-6511c.firebaseapp.com",
+          databaseURL: "https://hdmin-6511c-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "hdmin-6511c",
+          storageBucket: "hdmin-6511c.firebasestorage.app",
+          messagingSenderId: "439127164611",
+          appId: "1:439127164611:web:e7b8e14ec01754c5e18476"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        const moviesRef = database.ref('movies');
+
+        // View elements
+        const loginView = document.getElementById('loginView');
+        const adminView = document.getElementById('adminView');
+
+        // Form elements
+        const loginForm = document.getElementById('loginForm');
+        const addMovieForm = document.getElementById('addMovieForm');
+        const movieList = document.getElementById('movieList');
+        const loginError = document.getElementById('loginError');
+        const logoutButton = document.getElementById('logoutButton');
+
+        // App logic
+        const showAdminView = () => {
+            loginView.style.display = 'none';
+            adminView.style.display = 'block';
+            loadMovies();
+        };
+
+        const showLoginView = () => {
+            loginView.style.display = 'block';
+            adminView.style.display = 'none';
+        };
+        
+        // Check user auth state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showAdminView();
+            } else {
+                showLoginView();
+            }
+        });
+
+        // Login handler
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    console.error("Login Failed:", error);
+                    loginError.textContent = error.message;
+                });
+        });
+
+        // Logout handler
+        logoutButton.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // Add movie handler
+        addMovieForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const movieName = document.getElementById('movieName').value;
+            const posterLink = document.getElementById('posterLink').value;
+            const videoLink = document.getElementById('videoLink').value;
+
+            const newMovieRef = moviesRef.push();
+            newMovieRef.set({
+                name: movieName,
+                posterLink: posterLink,
+                videoLink: videoLink
+            }).then(() => {
+                addMovieForm.reset();
+            }).catch(error => {
+                console.error("Error adding movie:", error);
+            });
+        });
+
+        // Load and display movies
+        const loadMovies = () => {
+            moviesRef.on('value', (snapshot) => {
+                movieList.innerHTML = '';
+                const movies = snapshot.val();
+                if (movies) {
+                    const sortedMovies = Object.entries(movies).reverse(); // Show newest first
+                    for (const [key, movieData] of sortedMovies) {
+                         const movieItem = document.createElement('div');
+                        movieItem.className = 'movie-item';
+                        movieItem.innerHTML = `
+                            <span>${movieData.name}</span>
+                            <button class="delete-btn" data-id="${key}">Delete</button>
+                        `;
+                        movieList.appendChild(movieItem);
+                    }
+                } else {
+                    movieList.innerHTML = '<p>No movies in the database.</p>';
+                }
+            });
+        };
+
+        // Delete movie handler (event delegation)
+        movieList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const movieId = e.target.getAttribute('data-id');
+                if (confirm("Are you sure you want to delete this movie?")) {
+                    moviesRef.child(movieId).remove();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
