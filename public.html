@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDMINHAZ</title>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <style>
+        :root {
+            --primary-color: #e50914;
+            --dark-color: #141414;
+            --light-dark-color: #222;
+            --white-color: #fff;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--dark-color);
+            color: var(--white-color);
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background: linear-gradient(to bottom, rgba(20, 20, 20, 1) 10%, rgba(20, 20, 20, 0));
+            padding: 20px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            width: calc(100% - 120px);
+            z-index: 100;
+        }
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-transform: uppercase;
+        }
+        .search-container {
+            width: 50%;
+            max-width: 500px;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: 1px solid #333;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: var(--white-color);
+            font-size: 1em;
+            outline: none;
+            transition: background-color 0.3s;
+        }
+        #searchInput:focus {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .main-content {
+            padding-top: 100px;
+        }
+        .movies-container {
+            padding: 20px 60px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
+        }
+        .movie-poster {
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+        .movie-poster:hover {
+            transform: scale(1.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .movie-poster img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .movie-title {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0));
+            color: var(--white-color);
+            padding: 20px 10px 10px;
+            font-size: 1em;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .movie-poster:hover .movie-title {
+            opacity: 1;
+        }
+        .video-player-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .video-player-container {
+            width: 90%;
+            height: 90%;
+            max-width: 1200px;
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 3em;
+            color: var(--white-color);
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .loader {
+            text-align: center;
+            padding-top: 50px;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">HDMINHAZ</div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search title...">
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="movies-container" id="moviesContainer">
+            <div class="loader">Loading Movies...</div>
+        </div>
+    </main>
+
+    <div class="video-player-modal" id="videoPlayerModal">
+        <span class="close-btn" id="closeBtn">&times;</span>
+        <div class="video-player-container">
+            <video id="player" playsinline controls></video>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyCsKHpeuwVtoUNK49yXrJOz8yQJ8zXepSM",
+          authDomain: "hdmin-6511c.firebaseapp.com",
+          databaseURL: "https://hdmin-6511c-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "hdmin-6511c",
+          storageBucket: "hdmin-6511c.firebasestorage.app",
+          messagingSenderId: "439127164611",
+          appId: "1:439127164611:web:e7b8e14ec01754c5e18476"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const moviesRef = database.ref('movies');
+
+        const moviesContainer = document.getElementById('moviesContainer');
+        const searchInput = document.getElementById('searchInput');
+        const videoPlayerModal = document.getElementById('videoPlayerModal');
+        const closeBtn = document.getElementById('closeBtn');
+        const player = new Plyr('#player');
+        let allMovies = [];
+
+        const displayMovies = (movieArray) => {
+            moviesContainer.innerHTML = '';
+            if (movieArray.length === 0) {
+                moviesContainer.innerHTML = '<div class="loader">No movies found.</div>';
+                return;
+            }
+            movieArray.forEach(movieData => {
+                const moviePoster = document.createElement('div');
+                moviePoster.className = 'movie-poster';
+                moviePoster.innerHTML = `
+                    <img src="${movieData.posterLink}" alt="${movieData.name}">
+                    <div class="movie-title">${movieData.name}</div>
+                `;
+                moviePoster.addEventListener('click', () => {
+                    player.source = {
+                        type: 'video',
+                        title: movieData.name,
+                        sources: [{
+                            src: movieData.videoLink,
+                            type: 'video/mp4',
+                        }],
+                        poster: movieData.posterLink,
+                    };
+                    videoPlayerModal.style.display = 'flex';
+                    player.play();
+                });
+                moviesContainer.appendChild(moviePoster);
+            });
+        };
+
+        moviesRef.on('value', (snapshot) => {
+            allMovies = [];
+            const movies = snapshot.val();
+            if (movies) {
+                Object.keys(movies).forEach((key) => {
+                    allMovies.push({ id: key, ...movies[key] });
+                });
+            }
+            // Display movies in reverse order (newest first)
+            displayMovies(allMovies.slice().reverse());
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredMovies = allMovies.filter(movie => movie.name.toLowerCase().includes(searchTerm));
+            displayMovies(filteredMovies.slice().reverse());
+        });
+
+        const closeModal = () => {
+            player.stop();
+            videoPlayerModal.style.display = 'none';
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        videoPlayerModal.addEventListener('click', (e) => {
+            if (e.target === videoPlayerModal) {
+                closeModal();
+            }
+        });
+    </script>
+
+</body>
+</html>
